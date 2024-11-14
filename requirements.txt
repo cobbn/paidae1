@@ -41,4 +41,4 @@ tgcrypto
 uv
 uvloop
 xattr
-yt-dlp[default]
+yt-dlp
