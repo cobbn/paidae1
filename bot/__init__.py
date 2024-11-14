@@ -27,17 +27,23 @@ from dotenv import load_dotenv, dotenv_values
 from uvloop import install
 from pymongo import MongoClient
 from tzlocal import get_localzone
-from pyrogram import Client as tgClient
-from pyrogram import enums
+from inspect import signature
+from pyrogram import Client as tgClient, enums, utils as pyroutils
 from qbittorrentapi import Client as qbClient
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-faulthandler_enable()
+
 install()
 setdefaulttimeout(600)
-getLogger("pymongo").setLevel(ERROR)
-getLogger("httpx").setLevel(ERROR)
+
+pyroutils.MIN_CHAT_ID = -999999999999
+pyroutils.MIN_CHANNEL_ID = -100999999999999
 bot_start_time = time()
+
+getLogger("pymongo").setLevel(ERROR)
+getLogger("aiohttp").setLevel(ERROR)
+getLogger("httpx").setLevel(ERROR)
+
 
 
 class CustomFormatter(Formatter):
@@ -185,18 +191,22 @@ if len(EXTENSION_FILTER) > 0:
     for x in fx:
         cleaned_x = x.lstrip(".")
         GLOBAL_EXTENSION_FILTER.append(cleaned_x.strip().lower())
+        
+def wztgClient(*args, **kwargs):
+    if 'max_concurrent_transmissions' in signature(tgClient.__init__).parameters:
+        kwargs['max_concurrent_transmissions'] = 1000
+    return tgClient(*args, **kwargs)
 
 IS_PREMIUM_USER = False
 user = ""
 USER_SESSION_STRING = environ.get("USER_SESSION_STRING", "")
 if len(USER_SESSION_STRING) != 0:
     try:
-        user = tgClient(
+        user = wztgClient(
             "user",
             TELEGRAM_API,
             TELEGRAM_HASH,
             session_string=USER_SESSION_STRING,
-            workers=1000,
             parse_mode=enums.ParseMode.HTML,
             no_updates=True,
         ).start()
@@ -536,7 +546,7 @@ else:
     qb_opt = {**qbit_options}
     xnox_client.app_set_preferences(qb_opt)
 
-bot = tgClient(
+bot = wztgClient(
     "bot",
     TELEGRAM_API,
     TELEGRAM_HASH,
